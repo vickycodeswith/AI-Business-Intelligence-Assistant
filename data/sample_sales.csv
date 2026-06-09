@@ -1,0 +1,8 @@
+Product,Region,Sales,Profit
+Laptop,North,50000,12000
+Mouse,South,10000,3000
+Keyboard,East,15000,4000
+Monitor,West,30000,7000
+Laptop,South,45000,11000
+Laptop,South,45000,11000
+Mouse,,12000,2500

@@ -2,19 +2,53 @@ import pandas as pd
 
 
 def load_file(uploaded_file):
-    
-    if uploaded_file is None:
-        return None
 
-    file_name = uploaded_file.name
+    if uploaded_file.name.endswith(".csv"):
 
-    if file_name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
+        encodings = [
+            "utf-8",
+            "utf-8-sig",
+            "latin1",
+            "cp1252"
+        ]
 
-    elif file_name.endswith(".xlsx"):
-        df = pd.read_excel(uploaded_file)
+        separators = [
+            ",",
+            ";",
+            "\t",
+            "|"
+        ]
+
+        for encoding in encodings:
+
+            for sep in separators:
+
+                try:
+
+                    uploaded_file.seek(0)
+
+                    df = pd.read_csv(
+                        uploaded_file,
+                        encoding=encoding,
+                        sep=sep
+                    )
+
+                    if len(df.columns) > 1:
+                        return df
+
+                except Exception:
+                    continue
+
+        raise ValueError(
+            "Unable to read CSV file. Unsupported format."
+        )
+
+    elif uploaded_file.name.endswith(".xlsx"):
+
+        return pd.read_excel(uploaded_file)
 
     else:
-        return None
 
-    return df
+        raise ValueError(
+            "Unsupported file format."
+        )

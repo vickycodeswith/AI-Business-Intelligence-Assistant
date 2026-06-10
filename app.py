@@ -36,11 +36,19 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
-    df = load_file(uploaded_file)
-    st.session_state["df"] = df
-    st.success(
-    f"Dataset Loaded Successfully ({len(df)} rows)")
+    try:
+        df = load_file(uploaded_file)
+        st.session_state["df"] = df
+        st.success(
+        f"Dataset Loaded Successfully ({len(df)} rows)")
+        
+    except Exception as e:
 
+        st.error(
+            f"Could not read file: {e}"
+        )
+
+        st.stop()
 
 st.markdown("""
 Upload your dataset and unlock:

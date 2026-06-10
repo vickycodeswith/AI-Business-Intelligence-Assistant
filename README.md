@@ -23,8 +23,8 @@ AI-powered business analytics platform built using Streamlit, Gemini AI, Pandas,
 - Scikit-Learn
 
 ## Screenshots
+<img width="1470" height="956" alt="Screenshot 2026-06-10 at 3 27 25 AM" src="https://github.com/user-attachments/assets/69bcf547-d9b7-44c4-844d-66041f40610b" />
 
-(Add screenshots)
 
 ## Installation
 

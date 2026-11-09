@@ -1,44 +1,23 @@
+import pandas as pd
+from utils.profiling import profile_dataset
+
+
 def dataset_info(df):
+    profile = profile_dataset(df)
+    return {key: profile[key] for key in ("rows", "columns", "missing_values", "duplicate_rows")}
 
-    info = {
-
-        "rows": df.shape[0],
-
-        "columns": df.shape[1],
-
-        "missing_values": df.isnull().sum().sum(),
-
-        "duplicate_rows": df.duplicated().sum()
-
-    }
-
-    return info
 
 def column_information(df):
+    return profile_dataset(df)["column_details"]
 
-    column_info = {
-
-        "Column Name": df.columns,
-
-        "Data Type": df.dtypes.astype(str)
-
-    }
-
-    return column_info
 
 def column_categories(df):
+    profile = profile_dataset(df)
+    return profile["measure_columns"], profile["dimension_columns"]
 
-    numerical_cols = df.select_dtypes(
-        include=["int64", "float64"]
-    ).columns.tolist()
-
-    categorical_cols = df.select_dtypes(
-        include=["object"]
-    ).columns.tolist()
-
-    return numerical_cols, categorical_cols
 
 def statistical_summary(df):
-    summary = df.describe()
-    return summary
-
+    numeric = df.select_dtypes(include="number")
+    if numeric.empty:
+        return pd.DataFrame({"Message": ["No numerical columns are available for statistical summary."]})
+    return numeric.describe().T

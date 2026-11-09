@@ -1,149 +1,64 @@
 import streamlit as st
-
-from utils.load_data import load_file
-
-from utils.insights import (
-    generate_insights,
-    generate_recommendations
-)
-
-from utils.eda import (
-    dataset_info
-)
-
-import streamlit as st
-
-from utils.insights import (
-    generate_insights,
-    generate_recommendations
-)
-
-from utils.eda import (
-    dataset_info
-)
+import plotly.express as px
+from utils.eda import dataset_info
+from utils.insights import generate_insights, generate_recommendations
+from utils.profiling import profile_dataset
 from utils.styles import load_css
+
+st.set_page_config(page_title="Universal AI BI | Dashboard", page_icon="📊", layout="wide")
 load_css()
-st.set_page_config(
-    page_title="AI Business Intelligence Assistant",
-    page_icon="📊",
-    layout="wide"
-)
-
-st.title("📊 Business Dashboard")
-
+st.title("📊 Universal Business Dashboard")
 if "df" not in st.session_state:
-
-    st.warning(
-        "Please upload a dataset from Home page."
-    )
-
+    st.warning("Upload a dataset on the Home page first.")
     st.stop()
 
 df = st.session_state["df"]
-
-
+profile = profile_dataset(df)
+insights = generate_insights(df)
 info = dataset_info(df)
 
-st.subheader("Dataset Information")
+st.subheader("Dataset health")
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Rows", f"{info['rows']:,}")
+c2.metric("Columns", f"{info['columns']:,}")
+c3.metric("Missing cells", f"{info['missing_values']:,}")
+c4.metric("Duplicate rows", f"{info['duplicate_rows']:,}")
 
-col1, col2, col3, col4 = st.columns(4)
+st.subheader("Available numerical metrics")
+if insights["metrics"]:
+    metric_items = list(insights["metrics"].items())
+    for start in range(0, len(metric_items), 4):
+        cols = st.columns(min(4, len(metric_items) - start))
+        for col_ui, (name, values) in zip(cols, metric_items[start:start + 4]):
+            col_ui.metric(f"Total {name}", f"{values['sum']:,.2f}")
+            col_ui.caption(f"Average: {values['mean']:,.2f} · n={values['count']:,}")
+else:
+    st.info("No numeric measures were detected. This dataset can still be explored through its categorical columns and records.")
 
-with col1:
-    st.metric("Rows", info["rows"])
+st.subheader("Dataset preview")
+st.dataframe(df.head(20), use_container_width=True)
 
-with col2:
-    st.metric("Columns", info["columns"])
+if profile["measure_columns"]:
+    metric = profile["default_metric"]
+    if profile["datetime_columns"]:
+        st.subheader("Trend preview")
+        date_col = profile["date_column"]
+        chart_df = df[[date_col, metric]].copy()
+        chart_df[date_col] = __import__("pandas").to_datetime(chart_df[date_col], errors="coerce", format="mixed")
+        chart_df[metric] = __import__("pandas").to_numeric(chart_df[metric], errors="coerce")
+        chart_df = chart_df.dropna().groupby(date_col, as_index=False)[metric].sum().sort_values(date_col)
+        if not chart_df.empty:
+            st.plotly_chart(px.line(chart_df, x=date_col, y=metric, markers=True, title=f"{metric} over time"), use_container_width=True)
+    elif profile["dimension_columns"]:
+        st.subheader("Category breakdown")
+        dimension = profile["dimension_columns"][0]
+        chart_df = df[[dimension, metric]].copy()
+        chart_df[metric] = __import__("pandas").to_numeric(chart_df[metric], errors="coerce")
+        chart_df = chart_df.dropna().groupby(dimension, as_index=False)[metric].sum().sort_values(metric, ascending=False).head(20)
+        if not chart_df.empty:
+            st.plotly_chart(px.bar(chart_df, x=dimension, y=metric, title=f"{metric} by {dimension}"), use_container_width=True)
 
-with col3:
-    st.metric("Missing Values", info["missing_values"])
-
-with col4:
-    st.metric("Duplicate Rows", info["duplicate_rows"])
-
-# DATASET PREVIEW
-
-st.subheader("Dataset Preview")
-
-st.dataframe(
-    df.head(),
-    width="stretch"
-    )
-# BUSINESS INSIGHTS
-
-st.subheader("Business Insights")
-
-insights = generate_insights(df)
-
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    st.metric(
-        "Total Sales",
-        insights.get("total_sales", 0)
-    )
-
-with col2:
-    st.metric(
-        "Average Sales",
-        insights.get("average_sales", 0)
-    )
-
-with col3:
-    st.metric(
-        "Average Profit",
-        insights.get("average_profit", 0)
-    )
-
-with col4:
-    st.metric(
-        "Total Profit",
-        insights.get("total_profit", 0)
-    )
-
-# KEY BUSINESS FINDINGS
-
-st.subheader("Key Business Findings")
-
-st.write(
-    f"🏆 Best Selling Product: "
-    f"{insights.get('top_product', 'N/A')}"
-)
-
-st.write(
-    f"🌍 Highest Revenue Region: "
-    f"{insights.get('top_region', 'N/A')}"
-)
-
-st.subheader("Executive Recommendations")
-
-recommendations = generate_recommendations(
-    insights )
-
-
-for rec in recommendations:
-
-    st.info(rec)
-
-
-st.sidebar.markdown("""
-# 🚀 AI BI Assistant
-
-### Navigation
-
-📊 Dashboard
-
-📈 Analytics
-
-🤖 AI Assistant
-
-🔮 Forecasting
-
----
-Built with Gemini AI
-""")
-
-st.divider()
-
-st.caption(
-    "Built by Vicky Yadav | AI Business Intelligence Assistant"
-)
+st.subheader("Automatic findings")
+recommendations = generate_recommendations(insights)
+for item in recommendations:
+    st.info(item)
